@@ -18,22 +18,23 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
-    <!-- Tone.js para sonido -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
-
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #FDFBF8; }
         .card { background-color: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); padding: 1.5rem; margin-bottom: 1.5rem; }
         .btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 500; transition: all 0.2s ease-in-out; cursor: pointer; text-align: center; }
         .btn-primary { background-color: #6D4C41; color: white; }
         .btn-primary:hover { background-color: #4E342E; }
+        .btn-secondary { background-color: #A1887F; color: white; }
+        .btn-danger { background-color: #EF4444; color: white; }
         .nav-btn { color: #4E342E; font-weight: 500; padding: 0.5rem 1rem; border-radius: 0.5rem; border: 2px solid transparent; }
         .nav-btn.active { background-color: #D7CCC8; }
         .nav-btn:hover { background-color: #EFEBE9; }
         #root { opacity: 0; transition: opacity 0.5s; }
         #root.loaded { opacity: 1; }
         .modal-container { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: white; border-radius: 0.75rem; padding: 1.5rem; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background-color: white; border-radius: 0.75rem; padding: 1.5rem; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        input, select { border-radius: 0.5rem; border: 1px solid #D1C4E9; padding: 0.5rem; width: 100%; }
+        input:focus, select:focus { outline: none; border-color: #6D4C41; box-shadow: 0 0 0 2px #D1C4E9; }
     </style>
 </head>
 <body>
@@ -52,7 +53,7 @@
             appId: "1:865172486881:web:c632d444f0b07a48b915a0"
         };
         
-        firebase.initializeApp(firebaseConfig);
+        try { firebase.initializeApp(firebaseConfig); } catch(e) {}
         const db = firebase.firestore();
         const auth = firebase.auth();
 
@@ -88,6 +89,108 @@
                 </div>
             );
         };
+
+        const Modal = ({ isOpen, onClose, title, children }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="modal-container" onClick={onClose}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold text-stone-700 mb-4">{title}</h3>
+                        {children}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Sección Materiales ---
+        const Materiales = () => {
+            const { materials } = useContext(DataContext);
+            const [isModalOpen, setModalOpen] = useState(false);
+            const [editingMaterial, setEditingMaterial] = useState(null);
+
+            const openModalForCreate = () => {
+                setEditingMaterial(null);
+                setModalOpen(true);
+            };
+
+            const openModalForEdit = (material) => {
+                setEditingMaterial(material);
+                setModalOpen(true);
+            };
+
+            const handleSaveMaterial = async (e) => {
+                e.preventDefault();
+                const data = {
+                    name: e.target.name.value,
+                    weight: parseFloat(e.target.weight.value),
+                    price: parseFloat(e.target.price.value),
+                };
+
+                if (editingMaterial) {
+                    await db.collection('materials').doc(editingMaterial.id).set(data, { merge: true });
+                } else {
+                    await db.collection('materials').add(data);
+                }
+                setModalOpen(false);
+            };
+
+            const handleDeleteMaterial = async (id) => {
+                if (confirm('¿Seguro que querés borrar este material?')) {
+                    await db.collection('materials').doc(id).delete();
+                }
+            };
+
+            const formatCurrency = (amount) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount || 0);
+
+            return (
+                <div className="card">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold text-stone-700">Materiales</h2>
+                        <button onClick={openModalForCreate} className="btn btn-secondary">Nuevo Material</button>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left text-stone-500">
+                            <thead className="text-xs text-stone-700 uppercase bg-stone-50">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3">Nombre</th>
+                                    <th scope="col" className="px-6 py-3">$/gr</th>
+                                    <th scope="col" className="px-6 py-3 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {materials.length > 0 ? materials.map(m => (
+                                    <tr key={m.id} className="bg-white border-b">
+                                        <td className="px-6 py-4 font-medium text-stone-900" style={{wordBreak: 'break-word'}}>{m.name}</td>
+                                        <td className="px-6 py-4">{formatCurrency(m.price / m.weight)}</td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                                                <button onClick={() => openModalForEdit(m)} className="btn text-xs btn-secondary w-full">Editar</button>
+                                                <button onClick={() => handleDeleteMaterial(m.id)} className="btn text-xs btn-danger w-full">Eliminar</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr><td colSpan="3" className="text-center p-4 text-gray-500">No hay materiales cargados.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} title={editingMaterial ? 'Editar Material' : 'Nuevo Material'}>
+                        <form onSubmit={handleSaveMaterial}>
+                             <div className="space-y-4">
+                                <div><label className="block text-sm font-medium text-stone-600 mb-1">Nombre</label><input name="name" type="text" defaultValue={editingMaterial?.name} required /></div>
+                                <div><label className="block text-sm font-medium text-stone-600 mb-1">Peso (gr)</label><input name="weight" type="number" defaultValue={editingMaterial?.weight} required /></div>
+                                <div><label className="block text-sm font-medium text-stone-600 mb-1">Precio ($)</label><input name="price" type="number" step="0.01" defaultValue={editingMaterial?.price} required /></div>
+                             </div>
+                             <div className="flex justify-end gap-4 mt-6">
+                                <button type="button" onClick={() => setModalOpen(false)} className="btn bg-gray-200">Cancelar</button>
+                                <button type="submit" className="btn btn-primary">Guardar</button>
+                             </div>
+                        </form>
+                    </Modal>
+                </div>
+            );
+        };
         
         // --- App Principal ---
         const App = () => {
@@ -108,20 +211,19 @@
 
         // --- Panel Principal ---
         const Dashboard = () => {
-            const [view, setView] = useState('cocina'); // cocina, materiales, recetas, historial
+            const [view, setView] = useState('cocina');
             const [data, setData] = useState({ materials: [], recipes: [], orders: [], production: [] });
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
-                const unsubscribers = [
+                const unsubs = [
                     db.collection('materials').orderBy('name').onSnapshot(snap => setData(d => ({...d, materials: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
                     db.collection('recipes').onSnapshot(snap => setData(d => ({...d, recipes: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
                     db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snap => setData(d => ({...d, orders: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
                     db.collection('production').orderBy('createdAt').onSnapshot(snap => setData(d => ({...d, production: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) })))
                 ];
-                
                 setLoading(false);
-                return () => unsubscribers.forEach(unsub => unsub());
+                return () => unsubs.forEach(unsub => unsub());
             }, []);
 
             return (
@@ -143,10 +245,10 @@
                         <main>
                             {loading ? <LoadingSpinner /> : (
                                 <>
-                                    {view === 'cocina' && <CocinaDigital />}
-                                    {view === 'materiales' && <div>Sección Materiales (Próximamente)</div>}
-                                    {view === 'recetas' && <div>Sección Recetas (Próximamente)</div>}
-                                    {view === 'historial' && <div>Sección Historial (Próximamente)</div>}
+                                    <div className={view === 'cocina' ? '' : 'hidden'}><CocinaDigital /></div>
+                                    <div className={view === 'materiales' ? '' : 'hidden'}><Materiales /></div>
+                                    <div className={view === 'recetas' ? '' : 'hidden'}><div className="card text-center"><p>Sección Recetas (Próximamente)</p></div></div>
+                                    <div className={view === 'historial' ? '' : 'hidden'}><div className="card text-center"><p>Sección Historial (Próximamente)</p></div></div>
                                 </>
                             )}
                         </main>
@@ -161,27 +263,22 @@
 
              const handleStartProduction = (order) => {
                 if (!confirm(`¿Empezar a producir el pedido de ${order.customerName}?`)) return;
-
                 const batch = db.batch();
-                
                 order.items.forEach(item => {
                     const recipe = recipes.find(r => r.id === item.recipeId);
-                    if (recipe && recipe.pasos) {
+                    if (recipe && (recipe.pasos || []).length > 0) {
                         for (let i = 0; i < item.quantity; i++) {
                             const newProdRef = db.collection('production').doc();
                             batch.set(newProdRef, {
-                                orderId: order.id,
-                                customerName: order.customerName,
-                                recipeId: recipe.id,
-                                recipeName: recipe.name,
-                                pasoActualIndex: 0,
-                                timerEndTime: null,
+                                orderId: order.id, customerName: order.customerName, recipeId: recipe.id,
+                                recipeName: recipe.name, pasoActualIndex: 0, timerEndTime: null,
                                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
                             });
                         }
+                    } else {
+                        console.warn(`La receta ${recipe?.name || 'desconocida'} no tiene pasos definidos. No se agregó a producción.`);
                     }
                 });
-
                 batch.delete(db.collection('orders').doc(order.id));
                 batch.commit().catch(console.error);
              };
@@ -213,7 +310,7 @@
                             )) : <p className="text-center text-gray-500">No hay pedidos nuevos.</p>}
                         </div>
                     )}
-                     {view === 'cocina' && <p>Aquí irá la vista de la cocina con los pasos y timers.</p>}
+                     {view === 'cocina' && <p className="text-center text-gray-500">Aquí irá la vista de la cocina con los pasos y timers.</p>}
                  </div>
             );
         }
