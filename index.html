@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Pruebas | Panadería</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%2032%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M2%2C18c0%2C-6%2028%2C-6%2028%2C0c0%2C6%20-4%2C8%20-14%2C8c-10%2C0%20-14%2C-2%20-14%2C-8z%22%20fill%3D%22%238B4513%22%2F%3E%3Cpath%20d%3D%22M5%2C17c-1%2C-4%2022%2C-4%2022%2C0%22%20stroke%3D%22%23D2691E%22%20fill%3D%22none%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- React y Babel -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <!-- Tone.js para sonido -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #FDFBF8; }
+        .card { background-color: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); padding: 1.5rem; margin-bottom: 1.5rem; }
+        .btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 500; transition: all 0.2s ease-in-out; cursor: pointer; text-align: center; }
+        .btn-primary { background-color: #6D4C41; color: white; }
+        .btn-primary:hover { background-color: #4E342E; }
+        .nav-btn { color: #4E342E; font-weight: 500; padding: 0.5rem 1rem; border-radius: 0.5rem; border: 2px solid transparent; }
+        .nav-btn.active { background-color: #D7CCC8; }
+        .nav-btn:hover { background-color: #EFEBE9; }
+        #root { opacity: 0; transition: opacity 0.5s; }
+        #root.loaded { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        // --- Configuración de Firebase ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDM6HKN5aTFcTeXiAfcu2X5aBOEGGCqpq8",
+            authDomain: "panaderia-dev.firebaseapp.com",
+            projectId: "panaderia-dev",
+            storageBucket: "panaderia-dev.appspot.com",
+            messagingSenderId: "865172486881",
+            appId: "1:865172486881:web:c632d444f0b07a48b915a0"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // --- Componentes de UI ---
+        const LoadingSpinner = () => (
+            <div className="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+                <svg className="animate-spin h-10 w-10 text-stone-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+        );
+
+        const LoginScreen = ({ onLogin }) => {
+            const [error, setError] = useState('');
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const email = e.target.email.value;
+                const password = e.target.password.value;
+                setError('');
+                auth.signInWithEmailAndPassword(email, password)
+                    .catch(err => setError("Email o contraseña incorrectos."));
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-md w-full space-y-8 card">
+                        <div><h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Acceso de Administrador (PRUEBAS)</h2></div>
+                        <form id="login-form" className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                            <div className="rounded-md shadow-sm -space-y-px">
+                                <div><input id="email" name="email" type="email" autoComplete="email" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email" /></div>
+                                <div><input id="password" name="password" type="password" autoComplete="current-password" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Contraseña" /></div>
+                            </div>
+                            {error && <p className="text-red-500 text-sm">{error}</p>}
+                            <div><button type="submit" className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white btn-primary">Ingresar</button></div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+        
+        // --- App Principal ---
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const unsubscribe = auth.onAuthStateChanged(authUser => {
+                    if (authUser && !authUser.isAnonymous) {
+                        setUser(authUser);
+                    } else {
+                        setUser(null);
+                    }
+                    setLoading(false);
+                });
+                return () => unsubscribe();
+            }, []);
+
+            if (loading) {
+                return <LoadingSpinner />;
+            }
+
+            if (!user) {
+                return <LoginScreen />;
+            }
+
+            return <Dashboard onLogout={() => auth.signOut()} />;
+        };
+
+        // --- Panel Principal ---
+        const Dashboard = ({ onLogout }) => {
+             // (Aquí iría toda la lógica de la Cocina Digital que armaremos)
+            return (
+                <div className="container mx-auto p-4 md:p-8">
+                    <nav className="card flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                             <span className="nav-btn active">Cocina Digital (Próximamente)</span>
+                        </div>
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <a href="pedidos.html" target="_blank" className="nav-btn bg-blue-100 text-blue-800 hover:bg-blue-200 flex-1 text-center">Ver Tienda</a>
+                            <button onClick={onLogout} className="btn btn-danger flex-1">Cerrar Sesión</button>
+                        </div>
+                    </nav>
+                    <div className="card text-center">
+                        <h1 className="text-2xl font-bold text-stone-700">¡Bienvenido al Panel de Pruebas!</h1>
+                        <p className="mt-4 text-gray-600">Este es el nuevo esqueleto de tu aplicación, construido con React. A partir de acá, vamos a construir la "Cocina Digital" que hablamos.</p>
+                        <p className="mt-2 text-gray-500 text-sm">Por ahora, las secciones de Recetas, Materiales e Historial no están visibles, pero las integraremos en este nuevo sistema.</p>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+        document.getElementById('root').classList.add('loaded');
+
+    </script>
+</body>
+</html>
+
