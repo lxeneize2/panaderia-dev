@@ -32,13 +32,15 @@
         .nav-btn:hover { background-color: #EFEBE9; }
         #root { opacity: 0; transition: opacity 0.5s; }
         #root.loaded { opacity: 1; }
+        .modal-container { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: white; border-radius: 0.75rem; padding: 1.5rem; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useCallback } = React;
+        const { useState, useEffect, useCallback, createContext, useContext } = React;
 
         // --- Configuración de Firebase ---
         const firebaseConfig = {
@@ -54,25 +56,20 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        // --- Componentes de UI ---
-        const LoadingSpinner = () => (
-            <div className="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
-                <svg className="animate-spin h-10 w-10 text-stone-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </div>
-        );
+        // --- Contexto para compartir datos ---
+        const DataContext = createContext();
 
-        const LoginScreen = ({ onLogin }) => {
+        // --- Componentes de UI ---
+        const LoadingSpinner = () => ( <div className="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50"> <svg className="animate-spin h-10 w-10 text-stone-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle> <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg> </div> );
+
+        const LoginScreen = () => {
             const [error, setError] = useState('');
             const handleSubmit = (e) => {
                 e.preventDefault();
                 const email = e.target.email.value;
                 const password = e.target.password.value;
                 setError('');
-                auth.signInWithEmailAndPassword(email, password)
-                    .catch(err => setError("Email o contraseña incorrectos."));
+                auth.signInWithEmailAndPassword(email, password).catch(err => setError("Email o contraseña incorrectos."));
             };
 
             return (
@@ -99,53 +96,77 @@
 
             useEffect(() => {
                 const unsubscribe = auth.onAuthStateChanged(authUser => {
-                    if (authUser && !authUser.isAnonymous) {
-                        setUser(authUser);
-                    } else {
-                        setUser(null);
-                    }
+                    setUser(authUser && !authUser.isAnonymous ? authUser : null);
                     setLoading(false);
                 });
                 return () => unsubscribe();
             }, []);
 
-            if (loading) {
-                return <LoadingSpinner />;
-            }
-
-            if (!user) {
-                return <LoginScreen />;
-            }
-
-            return <Dashboard onLogout={() => auth.signOut()} />;
+            if (loading) return <LoadingSpinner />;
+            return user ? <Dashboard /> : <LoginScreen />;
         };
 
         // --- Panel Principal ---
-        const Dashboard = ({ onLogout }) => {
-             // (Aquí iría toda la lógica de la Cocina Digital que armaremos)
+        const Dashboard = () => {
+            const [view, setView] = useState('cocina'); // cocina, materiales, recetas, historial
+            const [data, setData] = useState({ materials: [], recipes: [], orders: [] });
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const unsubMaterials = db.collection('materials').onSnapshot(snap => setData(d => ({...d, materials: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) })));
+                const unsubRecipes = db.collection('recipes').onSnapshot(snap => setData(d => ({...d, recipes: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) })));
+                const unsubOrders = db.collection('orders').onSnapshot(snap => setData(d => ({...d, orders: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) })));
+                
+                setLoading(false);
+                return () => { unsubMaterials(); unsubRecipes(); unsubOrders(); };
+            }, []);
+
             return (
-                <div className="container mx-auto p-4 md:p-8">
-                    <nav className="card flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="flex flex-wrap items-center justify-center gap-2">
-                             <span className="nav-btn active">Cocina Digital (Próximamente)</span>
-                        </div>
-                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                            <a href="pedidos.html" target="_blank" className="nav-btn bg-blue-100 text-blue-800 hover:bg-blue-200 flex-1 text-center">Ver Tienda</a>
-                            <button onClick={onLogout} className="btn btn-danger flex-1">Cerrar Sesión</button>
-                        </div>
-                    </nav>
-                    <div className="card text-center">
-                        <h1 className="text-2xl font-bold text-stone-700">¡Bienvenido al Panel de Pruebas!</h1>
-                        <p className="mt-4 text-gray-600">Este es el nuevo esqueleto de tu aplicación, construido con React. A partir de acá, vamos a construir la "Cocina Digital" que hablamos.</p>
-                        <p className="mt-2 text-gray-500 text-sm">Por ahora, las secciones de Recetas, Materiales e Historial no están visibles, pero las integraremos en este nuevo sistema.</p>
+                <DataContext.Provider value={data}>
+                    <div className="container mx-auto p-4 md:p-8">
+                        <nav className="card flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                                <button onClick={() => setView('cocina')} className={`nav-btn ${view === 'cocina' ? 'active' : ''}`}>Cocina</button>
+                                <button onClick={() => setView('materiales')} className={`nav-btn ${view === 'materiales' ? 'active' : ''}`}>Materiales</button>
+                                <button onClick={() => setView('recetas')} className={`nav-btn ${view === 'recetas' ? 'active' : ''}`}>Recetas</button>
+                                <button onClick={() => setView('historial')} className={`nav-btn ${view === 'historial' ? 'active' : ''}`}>Historial</button>
+                            </div>
+                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <a href="pedidos.html" target="_blank" className="nav-btn bg-blue-100 text-blue-800 hover:bg-blue-200 flex-1 text-center">Ver Tienda</a>
+                                <button onClick={() => auth.signOut()} className="btn btn-danger flex-1">Cerrar Sesión</button>
+                            </div>
+                        </nav>
+                        
+                        <main>
+                            {loading ? <LoadingSpinner /> : (
+                                <>
+                                    {view === 'cocina' && <CocinaDigital />}
+                                    {view === 'materiales' && <div>Sección Materiales (Próximamente)</div>}
+                                    {view === 'recetas' && <div>Sección Recetas (Próximamente)</div>}
+                                    {view === 'historial' && <div>Sección Historial (Próximamente)</div>}
+                                </>
+                            )}
+                        </main>
                     </div>
-                </div>
+                </DataContext.Provider>
             );
         };
 
+        const CocinaDigital = () => {
+             const { orders, recipes } = useContext(DataContext);
+             // Aquí iría toda la lógica de la "Cocina Digital" que habíamos maquetado.
+             // Por ahora, mostramos un placeholder.
+            return (
+                 <div className="card text-center">
+                    <h1 className="text-2xl font-bold text-stone-700">Cocina Digital</h1>
+                    <p className="mt-4 text-gray-600">Esta es la nueva base. En el próximo paso, construiremos aquí la vista de producción por pedidos con los pasos y timers.</p>
+                    <p className="mt-4 font-bold">Pedidos Entrantes: {orders.length}</p>
+                 </div>
+            );
+        }
+
         ReactDOM.render(<App />, document.getElementById('root'));
         document.getElementById('root').classList.add('loaded');
-
     </script>
 </body>
 </html>
