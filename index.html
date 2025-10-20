@@ -109,16 +109,19 @@
         // --- Panel Principal ---
         const Dashboard = () => {
             const [view, setView] = useState('cocina'); // cocina, materiales, recetas, historial
-            const [data, setData] = useState({ materials: [], recipes: [], orders: [] });
+            const [data, setData] = useState({ materials: [], recipes: [], orders: [], production: [] });
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
-                const unsubMaterials = db.collection('materials').onSnapshot(snap => setData(d => ({...d, materials: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) })));
-                const unsubRecipes = db.collection('recipes').onSnapshot(snap => setData(d => ({...d, recipes: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) })));
-                const unsubOrders = db.collection('orders').onSnapshot(snap => setData(d => ({...d, orders: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) })));
+                const unsubscribers = [
+                    db.collection('materials').orderBy('name').onSnapshot(snap => setData(d => ({...d, materials: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
+                    db.collection('recipes').onSnapshot(snap => setData(d => ({...d, recipes: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
+                    db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snap => setData(d => ({...d, orders: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
+                    db.collection('production').orderBy('createdAt').onSnapshot(snap => setData(d => ({...d, production: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) })))
+                ];
                 
                 setLoading(false);
-                return () => { unsubMaterials(); unsubRecipes(); unsubOrders(); };
+                return () => unsubscribers.forEach(unsub => unsub());
             }, []);
 
             return (
@@ -153,20 +156,71 @@
         };
 
         const CocinaDigital = () => {
-             const { orders, recipes } = useContext(DataContext);
-             // Aquí iría toda la lógica de la "Cocina Digital" que habíamos maquetado.
-             // Por ahora, mostramos un placeholder.
+             const { orders, recipes, production } = useContext(DataContext);
+             const [view, setView] = useState('entrantes');
+
+             const handleStartProduction = (order) => {
+                if (!confirm(`¿Empezar a producir el pedido de ${order.customerName}?`)) return;
+
+                const batch = db.batch();
+                
+                order.items.forEach(item => {
+                    const recipe = recipes.find(r => r.id === item.recipeId);
+                    if (recipe && recipe.pasos) {
+                        for (let i = 0; i < item.quantity; i++) {
+                            const newProdRef = db.collection('production').doc();
+                            batch.set(newProdRef, {
+                                orderId: order.id,
+                                customerName: order.customerName,
+                                recipeId: recipe.id,
+                                recipeName: recipe.name,
+                                pasoActualIndex: 0,
+                                timerEndTime: null,
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
+                    }
+                });
+
+                batch.delete(db.collection('orders').doc(order.id));
+                batch.commit().catch(console.error);
+             };
+
             return (
-                 <div className="card text-center">
-                    <h1 className="text-2xl font-bold text-stone-700">Cocina Digital</h1>
-                    <p className="mt-4 text-gray-600">Esta es la nueva base. En el próximo paso, construiremos aquí la vista de producción por pedidos con los pasos y timers.</p>
-                    <p className="mt-4 font-bold">Pedidos Entrantes: {orders.length}</p>
+                 <div className="card">
+                    <div className="mb-6 border-b border-gray-200">
+                        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                            <button onClick={() => setView('entrantes')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${view === 'entrantes' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                Pedidos Entrantes ({orders.length})
+                            </button>
+                            <button onClick={() => setView('cocina')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${view === 'cocina' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                En Producción ({production.length})
+                            </button>
+                        </nav>
+                    </div>
+                    {view === 'entrantes' && (
+                        <div className="space-y-4">
+                            {orders.length > 0 ? orders.map(order => (
+                                <div key={order.id} className="p-4 border rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p className="font-bold text-lg">{order.customerName}</p>
+                                        <ul className="list-disc list-inside text-sm text-gray-600">
+                                            {(order.items || []).map((item, i) => <li key={i}>{item.quantity} x {recipes.find(r=>r.id === item.recipeId)?.name || '...'}</li>)}
+                                        </ul>
+                                    </div>
+                                    <button onClick={() => handleStartProduction(order)} className="btn bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700">Empezar Producción</button>
+                                </div>
+                            )) : <p className="text-center text-gray-500">No hay pedidos nuevos.</p>}
+                        </div>
+                    )}
+                     {view === 'cocina' && <p>Aquí irá la vista de la cocina con los pasos y timers.</p>}
                  </div>
             );
         }
 
         ReactDOM.render(<App />, document.getElementById('root'));
         document.getElementById('root').classList.add('loaded');
+
     </script>
 </body>
 </html>
