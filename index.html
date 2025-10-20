@@ -22,8 +22,9 @@
         body { font-family: 'Inter', sans-serif; background-color: #FDFBF8; }
         .card { background-color: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); padding: 1.5rem; margin-bottom: 1.5rem; }
         .btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 500; transition: all 0.2s ease-in-out; cursor: pointer; text-align: center; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-primary { background-color: #6D4C41; color: white; }
-        .btn-primary:hover { background-color: #4E342E; }
+        .btn-primary:hover:not(:disabled) { background-color: #4E342E; }
         .btn-secondary { background-color: #A1887F; color: white; }
         .btn-danger { background-color: #EF4444; color: white; }
         .nav-btn { color: #4E342E; font-weight: 500; padding: 0.5rem 1rem; border-radius: 0.5rem; border: 2px solid transparent; }
@@ -31,10 +32,12 @@
         .nav-btn:hover { background-color: #EFEBE9; }
         #root { opacity: 0; transition: opacity 0.5s; }
         #root.loaded { opacity: 1; }
-        .modal-container { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: white; border-radius: 0.75rem; padding: 1.5rem; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .modal-container { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.5); padding: 1rem; }
+        .modal-content { background-color: white; border-radius: 0.75rem; padding: 1.5rem; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
         input, select { border-radius: 0.5rem; border: 1px solid #D1C4E9; padding: 0.5rem; width: 100%; }
         input:focus, select:focus { outline: none; border-color: #6D4C41; box-shadow: 0 0 0 2px #D1C4E9; }
+        .wood-texture { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><g fill="%236D4C41" fill-opacity="0.1"><path d="M0 0h40v40H0zM40 40h40v40H40z"/></g></svg>'); background-color: #A1887F; }
+        .fire-texture { background-color: #ff8c00; background-image: linear-gradient(45deg, #ffA500 25%, transparent 25%), linear-gradient(-45deg, #ffA500 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ffA500 75%), linear-gradient(-45deg, transparent 75%, #ffA500 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
     </style>
 </head>
 <body>
@@ -56,13 +59,29 @@
         try { firebase.initializeApp(firebaseConfig); } catch(e) {}
         const db = firebase.firestore();
         const auth = firebase.auth();
+        const materialsCollection = db.collection('materials');
+        const recipesCollection = db.collection('recipes');
+        const ordersCollection = db.collection('orders');
+        const completedOrdersCollection = db.collection('completedOrders');
 
         // --- Contexto para compartir datos ---
         const DataContext = createContext();
 
+        const formatCurrency = (amount) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount || 0);
+        const formatMinutes = (mins) => { if (!mins || mins < 1) return '0 min'; const h = Math.floor(mins / 60); const m = mins % 60; return `${h > 0 ? h + 'h ' : ''}${m}min`; };
+        const calculateRecipeCost = (recipeId, materials) => { 
+            const recipe = recipes.find(r => r.id === recipeId); 
+            if (!recipe || !recipe.ingredients) return 0; 
+            return recipe.ingredients.reduce((total, ingredient) => { 
+                const material = materials.find(m => m.id === ingredient.materialId); 
+                if (!material) return total; 
+                const pricePerGram = (material.price && material.weight) ? material.price / material.weight : 0; 
+                return total + (pricePerGram * ingredient.grams); 
+            }, 0); 
+        };
+
         // --- Componentes de UI ---
         const LoadingSpinner = () => ( <div className="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50"> <svg className="animate-spin h-10 w-10 text-stone-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle> <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg> </div> );
-
         const LoginScreen = () => {
             const [error, setError] = useState('');
             const handleSubmit = (e) => {
@@ -72,76 +91,42 @@
                 setError('');
                 auth.signInWithEmailAndPassword(email, password).catch(err => setError("Email o contraseña incorrectos."));
             };
-
-            return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-md w-full space-y-8 card">
-                        <div><h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Acceso de Administrador (PRUEBAS)</h2></div>
-                        <form id="login-form" className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                            <div className="rounded-md shadow-sm -space-y-px">
-                                <div><input id="email" name="email" type="email" autoComplete="email" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email" /></div>
-                                <div><input id="password" name="password" type="password" autoComplete="current-password" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Contraseña" /></div>
-                            </div>
-                            {error && <p className="text-red-500 text-sm">{error}</p>}
-                            <div><button type="submit" className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white btn-primary">Ingresar</button></div>
-                        </form>
-                    </div>
-                </div>
-            );
+            return ( <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"> <div className="max-w-md w-full space-y-8 card"> <div><h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Acceso de Administrador</h2></div> <form className="mt-8 space-y-6" onSubmit={handleSubmit}> <div className="rounded-md shadow-sm -space-y-px"> <div><input name="email" type="email" autoComplete="email" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email" /></div> <div><input name="password" type="password" autoComplete="current-password" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Contraseña" /></div> </div> {error && <p className="text-red-500 text-sm">{error}</p>} <div><button type="submit" className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white btn-primary">Ingresar</button></div> </form> </div> </div> );
         };
 
         const Modal = ({ isOpen, onClose, title, children }) => {
             if (!isOpen) return null;
-            return (
+            return ReactDOM.createPortal(
                 <div className="modal-container" onClick={onClose}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <h3 className="text-xl font-bold text-stone-700 mb-4">{title}</h3>
                         {children}
                     </div>
-                </div>
+                </div>,
+                document.body
             );
         };
-
-        // --- Sección Materiales ---
+        
+        // --- Componentes de Secciones ---
         const Materiales = () => {
             const { materials } = useContext(DataContext);
             const [isModalOpen, setModalOpen] = useState(false);
             const [editingMaterial, setEditingMaterial] = useState(null);
-
-            const openModalForCreate = () => {
-                setEditingMaterial(null);
-                setModalOpen(true);
-            };
-
-            const openModalForEdit = (material) => {
-                setEditingMaterial(material);
-                setModalOpen(true);
-            };
-
+            const [isSaving, setIsSaving] = useState(false);
+            const openModalForCreate = () => { setEditingMaterial(null); setModalOpen(true); };
+            const openModalForEdit = (material) => { setEditingMaterial(material); setModalOpen(true); };
             const handleSaveMaterial = async (e) => {
                 e.preventDefault();
-                const data = {
-                    name: e.target.name.value,
-                    weight: parseFloat(e.target.weight.value),
-                    price: parseFloat(e.target.price.value),
-                };
-
-                if (editingMaterial) {
-                    await db.collection('materials').doc(editingMaterial.id).set(data, { merge: true });
-                } else {
-                    await db.collection('materials').add(data);
-                }
-                setModalOpen(false);
+                setIsSaving(true);
+                const data = { name: e.target.name.value, weight: parseFloat(e.target.weight.value), price: parseFloat(e.target.price.value) };
+                try {
+                    if (editingMaterial) { await materialsCollection.doc(editingMaterial.id).set(data, { merge: true }); }
+                    else { await materialsCollection.add(data); }
+                    setModalOpen(false);
+                } catch(err) { console.error(err); alert("Error al guardar."); }
+                finally { setIsSaving(false); }
             };
-
-            const handleDeleteMaterial = async (id) => {
-                if (confirm('¿Seguro que querés borrar este material?')) {
-                    await db.collection('materials').doc(id).delete();
-                }
-            };
-
-            const formatCurrency = (amount) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount || 0);
-
+            const handleDeleteMaterial = async (id) => { if (confirm('¿Seguro?')) { await materialsCollection.doc(id).delete(); } };
             return (
                 <div className="card">
                     <div className="flex justify-between items-center mb-4">
@@ -151,17 +136,13 @@
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left text-stone-500">
                             <thead className="text-xs text-stone-700 uppercase bg-stone-50">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3">Nombre</th>
-                                    <th scope="col" className="px-6 py-3">$/gr</th>
-                                    <th scope="col" className="px-6 py-3 text-right">Acciones</th>
-                                </tr>
+                                <tr><th scope="col" className="px-6 py-3">Nombre</th><th scope="col" className="px-6 py-3">$/gr</th><th scope="col" className="px-6 py-3 text-right">Acciones</th></tr>
                             </thead>
                             <tbody>
                                 {materials.length > 0 ? materials.map(m => (
                                     <tr key={m.id} className="bg-white border-b">
                                         <td className="px-6 py-4 font-medium text-stone-900" style={{wordBreak: 'break-word'}}>{m.name}</td>
-                                        <td className="px-6 py-4">{formatCurrency(m.price / m.weight)}</td>
+                                        <td className="px-6 py-4">{formatCurrency(m.price && m.weight ? m.price / m.weight : 0)}</td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex flex-col sm:flex-row gap-2 justify-end">
                                                 <button onClick={() => openModalForEdit(m)} className="btn text-xs btn-secondary w-full">Editar</button>
@@ -169,9 +150,7 @@
                                             </div>
                                         </td>
                                     </tr>
-                                )) : (
-                                    <tr><td colSpan="3" className="text-center p-4 text-gray-500">No hay materiales cargados.</td></tr>
-                                )}
+                                )) : ( <tr><td colSpan="3" className="text-center p-4 text-gray-500">No hay materiales.</td></tr> )}
                             </tbody>
                         </table>
                     </div>
@@ -184,14 +163,18 @@
                              </div>
                              <div className="flex justify-end gap-4 mt-6">
                                 <button type="button" onClick={() => setModalOpen(false)} className="btn bg-gray-200">Cancelar</button>
-                                <button type="submit" className="btn btn-primary">Guardar</button>
+                                <button type="submit" disabled={isSaving} className="btn btn-primary">{isSaving ? 'Guardando...' : 'Guardar'}</button>
                              </div>
                         </form>
                     </Modal>
                 </div>
             );
         };
-        
+
+        const Recetas = () => { /* ... Próximamente ... */ return <div className="card">Sección Recetas</div>; };
+        const Historial = () => { /* ... Próximamente ... */ return <div className="card">Sección Historial</div>; };
+        const Pedidos = () => { /* ... Próximamente ... */ return <div className="card">Sección Pedidos</div>; };
+
         // --- App Principal ---
         const App = () => {
             const [user, setUser] = useState(null);
@@ -211,16 +194,16 @@
 
         // --- Panel Principal ---
         const Dashboard = () => {
-            const [view, setView] = useState('cocina');
-            const [data, setData] = useState({ materials: [], recipes: [], orders: [], production: [] });
+            const [view, setView] = useState('materiales');
+            const [data, setData] = useState({ materials: [], recipes: [], orders: [] });
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
                 const unsubs = [
                     db.collection('materials').orderBy('name').onSnapshot(snap => setData(d => ({...d, materials: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
-                    db.collection('recipes').onSnapshot(snap => setData(d => ({...d, recipes: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
-                    db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snap => setData(d => ({...d, orders: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
-                    db.collection('production').orderBy('createdAt').onSnapshot(snap => setData(d => ({...d, production: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) })))
+                    // Descomentar cuando se implementen las otras secciones
+                    // db.collection('recipes').onSnapshot(snap => setData(d => ({...d, recipes: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
+                    // db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snap => setData(d => ({...d, orders: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) })))
                 ];
                 setLoading(false);
                 return () => unsubs.forEach(unsub => unsub());
@@ -231,7 +214,7 @@
                     <div className="container mx-auto p-4 md:p-8">
                         <nav className="card flex flex-col sm:flex-row justify-between items-center gap-4">
                             <div className="flex flex-wrap items-center justify-center gap-2">
-                                <button onClick={() => setView('cocina')} className={`nav-btn ${view === 'cocina' ? 'active' : ''}`}>Cocina</button>
+                                <button onClick={() => setView('pedidos')} className={`nav-btn ${view === 'pedidos' ? 'active' : ''}`}>Pedidos</button>
                                 <button onClick={() => setView('materiales')} className={`nav-btn ${view === 'materiales' ? 'active' : ''}`}>Materiales</button>
                                 <button onClick={() => setView('recetas')} className={`nav-btn ${view === 'recetas' ? 'active' : ''}`}>Recetas</button>
                                 <button onClick={() => setView('historial')} className={`nav-btn ${view === 'historial' ? 'active' : ''}`}>Historial</button>
@@ -245,10 +228,10 @@
                         <main>
                             {loading ? <LoadingSpinner /> : (
                                 <>
-                                    <div className={view === 'cocina' ? '' : 'hidden'}><CocinaDigital /></div>
-                                    <div className={view === 'materiales' ? '' : 'hidden'}><Materiales /></div>
-                                    <div className={view === 'recetas' ? '' : 'hidden'}><div className="card text-center"><p>Sección Recetas (Próximamente)</p></div></div>
-                                    <div className={view === 'historial' ? '' : 'hidden'}><div className="card text-center"><p>Sección Historial (Próximamente)</p></div></div>
+                                    <div className={view !== 'pedidos' ? 'hidden' : ''}><Pedidos /></div>
+                                    <div className={view !== 'materiales' ? 'hidden' : ''}><Materiales /></div>
+                                    <div className={view !== 'recetas' ? 'hidden' : ''}><Recetas /></div>
+                                    <div className={view !== 'historial' ? 'hidden' : ''}><Historial /></div>
                                 </>
                             )}
                         </main>
@@ -256,64 +239,6 @@
                 </DataContext.Provider>
             );
         };
-
-        const CocinaDigital = () => {
-             const { orders, recipes, production } = useContext(DataContext);
-             const [view, setView] = useState('entrantes');
-
-             const handleStartProduction = (order) => {
-                if (!confirm(`¿Empezar a producir el pedido de ${order.customerName}?`)) return;
-                const batch = db.batch();
-                order.items.forEach(item => {
-                    const recipe = recipes.find(r => r.id === item.recipeId);
-                    if (recipe && (recipe.pasos || []).length > 0) {
-                        for (let i = 0; i < item.quantity; i++) {
-                            const newProdRef = db.collection('production').doc();
-                            batch.set(newProdRef, {
-                                orderId: order.id, customerName: order.customerName, recipeId: recipe.id,
-                                recipeName: recipe.name, pasoActualIndex: 0, timerEndTime: null,
-                                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        }
-                    } else {
-                        console.warn(`La receta ${recipe?.name || 'desconocida'} no tiene pasos definidos. No se agregó a producción.`);
-                    }
-                });
-                batch.delete(db.collection('orders').doc(order.id));
-                batch.commit().catch(console.error);
-             };
-
-            return (
-                 <div className="card">
-                    <div className="mb-6 border-b border-gray-200">
-                        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                            <button onClick={() => setView('entrantes')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${view === 'entrantes' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                                Pedidos Entrantes ({orders.length})
-                            </button>
-                            <button onClick={() => setView('cocina')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${view === 'cocina' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                                En Producción ({production.length})
-                            </button>
-                        </nav>
-                    </div>
-                    {view === 'entrantes' && (
-                        <div className="space-y-4">
-                            {orders.length > 0 ? orders.map(order => (
-                                <div key={order.id} className="p-4 border rounded-lg flex justify-between items-center">
-                                    <div>
-                                        <p className="font-bold text-lg">{order.customerName}</p>
-                                        <ul className="list-disc list-inside text-sm text-gray-600">
-                                            {(order.items || []).map((item, i) => <li key={i}>{item.quantity} x {recipes.find(r=>r.id === item.recipeId)?.name || '...'}</li>)}
-                                        </ul>
-                                    </div>
-                                    <button onClick={() => handleStartProduction(order)} className="btn bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700">Empezar Producción</button>
-                                </div>
-                            )) : <p className="text-center text-gray-500">No hay pedidos nuevos.</p>}
-                        </div>
-                    )}
-                     {view === 'cocina' && <p className="text-center text-gray-500">Aquí irá la vista de la cocina con los pasos y timers.</p>}
-                 </div>
-            );
-        }
 
         ReactDOM.render(<App />, document.getElementById('root'));
         document.getElementById('root').classList.add('loaded');
