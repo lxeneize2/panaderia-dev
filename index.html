@@ -3,51 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Pruebas | Panadería</title>
+    <title>Gestión Panadería DEV</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%2032%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M2%2C18c0%2C-6%2028%2C-6%2028%2C0c0%2C6%20-4%2C8%20-14%2C8c-10%2C0%20-14%2C-2%20-14%2C-8z%22%20fill%3D%22%238B4513%22%2F%3E%3Cpath%20d%3D%22M5%2C17c-1%2C-4%2022%2C-4%2022%2C0%22%20stroke%3D%22%23D2691E%22%20fill%3D%22none%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     
     <!-- React y Babel -->
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Firebase -->
+    <!-- Firebase (versión compat para facilidad de uso) -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #FDFBF8; }
-        .card { background-color: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); padding: 1.5rem; margin-bottom: 1.5rem; }
-        .btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 500; transition: all 0.2s ease-in-out; cursor: pointer; text-align: center; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-primary { background-color: #6D4C41; color: white; }
-        .btn-primary:hover:not(:disabled) { background-color: #4E342E; }
-        .btn-secondary { background-color: #A1887F; color: white; }
-        .btn-danger { background-color: #EF4444; color: white; }
-        .nav-btn { color: #4E342E; font-weight: 500; padding: 0.5rem 1rem; border-radius: 0.5rem; border: 2px solid transparent; }
+        body { font-family: 'Inter', sans-serif; background-color: #FDFBF8; color: #402E32; }
+        .font-serif { font-family: 'Playfair Display', serif; }
+        .card { background-color: white; border-radius: 0.75rem; box-shadow: 0 4px_6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+        .btn { padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 500; transition: all 0.2s ease-in-out; cursor: pointer; text-align: center; border: 2px solid transparent; }
+        .btn:disabled { background-color: #D7CCC8; cursor: not-allowed; }
+        .btn-primary { background-color: #A97C50; color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: #8C6239; }
+        .btn-secondary { background-color: #D6C3B3; color: #402E32; font-weight: 600; }
+        .btn-secondary:hover { background-color: #C1A892; }
+        .btn-danger { background-color: #C62828; color: white; }
+        .btn-danger:hover { background-color: #B71C1C; }
+        .nav-btn { color: #4E342E; font-weight: 500; padding: 0.5rem 1rem; border-radius: 0.5rem; }
         .nav-btn.active { background-color: #D7CCC8; }
         .nav-btn:hover { background-color: #EFEBE9; }
+        input[type="text"], input[type="tel"], input[type="email"], input[type="password"], input[type="number"] { border-radius: 0.5rem; border: 1px solid #D6C3B3; padding: 0.75rem; width: 100%; }
+        input:focus { outline: none; border-color: #A97C50; box-shadow: 0 0 0 2px rgba(169, 124, 80, 0.3); }
         #root { opacity: 0; transition: opacity 0.5s; }
         #root.loaded { opacity: 1; }
-        .modal-container { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.5); padding: 1rem; }
-        .modal-content { background-color: white; border-radius: 0.75rem; padding: 1.5rem; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
-        input, select { border-radius: 0.5rem; border: 1px solid #D1C4E9; padding: 0.5rem; width: 100%; }
-        input:focus, select:focus { outline: none; border-color: #6D4C41; box-shadow: 0 0 0 2px #D1C4E9; }
-        .wood-texture { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><g fill="%236D4C41" fill-opacity="0.1"><path d="M0 0h40v40H0zM40 40h40v40H40z"/></g></svg>'); background-color: #A1887F; }
-        .fire-texture { background-color: #ff8c00; background-image: linear-gradient(45deg, #ffA500 25%, transparent 25%), linear-gradient(-45deg, #ffA500 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ffA500 75%), linear-gradient(-45deg, transparent 75%, #ffA500 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
-        .order-card.completing { opacity: 0; transform: translateY(-20px); max-height: 0 !important; padding: 0 !important; margin-bottom: 0 !important; border: none !important; transition: all 0.5s ease-out; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useCallback, createContext, useContext } = React;
+        const { useState, useEffect, useCallback, useMemo } = React;
 
-        // --- Configuración de Firebase ---
+        // --- Configuración de Firebase (panaderia-dev) ---
         const firebaseConfig = {
             apiKey: "AIzaSyDM6HKN5aTFcTeXiAfcu2X5aBOEGGCqpq8",
             authDomain: "panaderia-dev.firebaseapp.com",
@@ -57,31 +55,210 @@
             appId: "1:865172486881:web:c632d444f0b07a48b915a0"
         };
         
-        try { firebase.initializeApp(firebaseConfig); } catch(e) {}
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
-        const materialsCollection = db.collection('materials');
-        const recipesCollection = db.collection('recipes');
-        const ordersCollection = db.collection('orders');
-        const completedOrdersCollection = db.collection('completedOrders');
 
-        // --- Contexto para compartir datos ---
-        const DataContext = createContext();
+        // --- Componentes de UI Genéricos ---
+        const LoadingSpinner = () => (
+            <div className="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+                <svg className="animate-spin h-10 w-10 text-stone-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+        );
+        
+        const SuccessModal = ({ onClose }) => (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="card text-center p-8 max-w-sm mx-auto">
+                    <h2 className="text-2xl font-serif text-green-600 mb-4">¡Pedido Enviado!</h2>
+                    <p className="text-stone-600 mb-6">Gracias por tu pedido. Te contactaremos a la brevedad para confirmar.</p>
+                    <button onClick={onClose} className="btn btn-primary">Aceptar</button>
+                </div>
+            </div>
+        );
 
-        const formatCurrency = (amount) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount || 0);
-        const formatMinutes = (mins) => { if (!mins || mins < 1) return '0 min'; const h = Math.floor(mins / 60); const m = mins % 60; return `${h > 0 ? h + 'h ' : ''}${m}min`; };
-        const calculateRecipeCost = (recipe, materials) => { 
-            if (!recipe || !recipe.ingredients) return 0; 
-            return recipe.ingredients.reduce((total, ingredient) => { 
-                const material = materials.find(m => m.id === ingredient.materialId); 
-                if (!material) return total; 
-                const pricePerGram = (material.price && material.weight) ? material.price / material.weight : 0; 
-                return total + (pricePerGram * ingredient.grams); 
-            }, 0); 
+        // --- Componente: Tienda para Clientes ---
+        const CustomerStore = ({ user }) => {
+            const [recipes, setRecipes] = useState([]);
+            const [cart, setCart] = useState([]);
+            const [customerName, setCustomerName] = useState('');
+            const [customerPhone, setCustomerPhone] = useState('');
+            const [loading, setLoading] = useState(true);
+            const [submitting, setSubmitting] = useState(false);
+            const [showSuccess, setShowSuccess] = useState(false);
+
+            useEffect(() => {
+                // Si no hay usuario, no hacemos nada.
+                if (!user) {
+                    setLoading(false);
+                    return;
+                }
+                
+                // Si hay usuario, nos suscribimos a las recetas.
+                const unsubscribe = db.collection('recipes').onSnapshot(snapshot => {
+                    const recipesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setRecipes(recipesData);
+                    setLoading(false);
+                }, error => {
+                    console.error("Error al cargar recetas:", error);
+                    setLoading(false);
+                });
+                return () => unsubscribe();
+            }, [user]); // Este efecto depende del usuario. Si cambia, se vuelve a ejecutar.
+
+            const formatCurrency = (amount) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount || 0);
+
+            const handleAddToCart = (recipe, quantity) => {
+                setCart(prevCart => {
+                    const existingItem = prevCart.find(item => item.recipeId === recipe.id);
+                    if (existingItem) {
+                        return prevCart.map(item =>
+                            item.recipeId === recipe.id ? { ...item, quantity: item.quantity + quantity } : item
+                        );
+                    }
+                    return [...prevCart, { recipeId: recipe.id, name: recipe.name, quantity, salePrice: recipe.salePrice }];
+                });
+            };
+            
+            const handleUpdateQuantity = (recipeId, action) => {
+                setCart(prevCart => {
+                    const item = prevCart.find(i => i.recipeId === recipeId);
+                    if (!item) return prevCart;
+
+                    if (action === 'increase') {
+                        return prevCart.map(i => i.recipeId === recipeId ? { ...i, quantity: i.quantity + 1 } : i);
+                    }
+                    if (action === 'decrease') {
+                        if (item.quantity === 1) {
+                            return prevCart.filter(i => i.recipeId !== recipeId);
+                        }
+                        return prevCart.map(i => i.recipeId === recipeId ? { ...i, quantity: i.quantity - 1 } : i);
+                    }
+                    return prevCart;
+                });
+            };
+
+            const handleSubmitOrder = async (e) => {
+                e.preventDefault();
+                if (cart.length === 0) { alert("Tu carrito está vacío."); return; }
+                setSubmitting(true);
+                const orderData = {
+                    customerName,
+                    customerPhone,
+                    items: cart.map(item => ({ recipeId: item.recipeId, quantity: item.quantity, name: item.name, unitPrice: item.salePrice })),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'active'
+                };
+
+                try {
+                    await db.collection('activeOrders').add(orderData);
+                    setShowSuccess(true);
+                    setCart([]);
+                    setCustomerName('');
+                    setCustomerPhone('');
+                } catch (error) {
+                    console.error("Error al enviar pedido:", error);
+                    alert("Hubo un problema al enviar tu pedido.");
+                } finally {
+                    setSubmitting(false);
+                }
+            };
+            
+            const cartTotal = useMemo(() => cart.reduce((total, item) => total + item.salePrice * item.quantity, 0), [cart]);
+
+            if (loading) return <LoadingSpinner />;
+
+            return (
+                <div className="container mx-auto p-4 md:p-8 max-w-5xl">
+                    {showSuccess && <SuccessModal onClose={() => setShowSuccess(false)} />}
+                    <header className="text-center my-8 md:my-12">
+                        <h1 className="text-4xl md:text-5xl font-serif text-[#402E32]">Nuestros Productos Artesanales</h1>
+                        <p className="text-lg text-stone-600 mt-2">Elige tus favoritos y haz tu pedido.</p>
+                    </header>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2">
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                {recipes.length > 0 ? recipes.map(recipe => (
+                                    <RecipeCard key={recipe.id} recipe={recipe} onAddToCart={handleAddToCart} formatCurrency={formatCurrency} />
+                                )) : <p className="text-center text-stone-500 sm:col-span-2">No hay productos disponibles en este momento.</p>}
+                            </div>
+                        </div>
+
+                        <div className="sticky top-8 self-start">
+                             <div className="card p-6">
+                                <h2 className="text-2xl font-serif text-stone-800 mb-4">Tu Pedido</h2>
+                                <div id="cart-items" className="space-y-3 mb-4 max-h-60 overflow-y-auto pr-2">
+                                    {cart.length === 0 ? <p className="text-stone-500">Tu carrito está vacío.</p> : cart.map(item => (
+                                        <div key={item.recipeId} className="flex justify-between items-center">
+                                            <div>
+                                                <span className="font-medium text-stone-700">{item.name}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={() => handleUpdateQuantity(item.recipeId, 'decrease')} className="text-lg font-bold p-1 text-stone-400 hover:text-red-500">-</button>
+                                                    <span className="text-sm font-bold">{item.quantity}</span>
+                                                    <button onClick={() => handleUpdateQuantity(item.recipeId, 'increase')} className="text-lg font-bold p-1 text-stone-400 hover:text-green-500">+</button>
+                                                </div>
+                                            </div>
+                                            <span className="font-medium">{formatCurrency(item.salePrice * item.quantity)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="border-t border-stone-200 pt-4 flex justify-between items-center">
+                                    <span className="text-lg font-bold text-stone-800">Total:</span>
+                                    <span id="cart-total" className="text-xl font-bold text-stone-800">{formatCurrency(cartTotal)}</span>
+                                </div>
+                            </div>
+                             <div className="card p-6 mt-8">
+                                <h2 className="text-2xl font-serif text-stone-800 mb-4">Completa tus Datos</h2>
+                                <form onSubmit={handleSubmitOrder} className="space-y-4">
+                                    <div>
+                                        <label htmlFor="client-name" className="block text-sm font-medium text-stone-600 mb-1">Nombre y Apellido</label>
+                                        <input type="text" id="client-name" required value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Tu nombre" />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="client-phone" className="block text-sm font-medium text-stone-600 mb-1">Número de Teléfono</label>
+                                        <input type="tel" id="client-phone" required value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Para contactarte" />
+                                    </div>
+                                    <button type="submit" disabled={submitting || cart.length === 0} className="btn btn-primary w-full !py-3 !text-base">{submitting ? 'Enviando...' : 'Enviar Pedido'}</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        const RecipeCard = ({ recipe, onAddToCart, formatCurrency }) => {
+            const [quantity, setQuantity] = useState(1);
+            const [added, setAdded] = useState(false);
+            
+            const handleAddClick = () => {
+                onAddToCart(recipe, quantity);
+                setAdded(true);
+                setQuantity(1);
+                setTimeout(() => setAdded(false), 1500);
+            };
+
+            const imageUrl = recipe.imageUrl || `https://placehold.co/600x400/FBF9F6/402E32?text=${encodeURIComponent(recipe.name)}`;
+            
+            return (
+                <div className="card flex flex-col overflow-hidden transform hover:-translate-y-1 transition-transform duration-300">
+                    <img src={imageUrl} alt={recipe.name} className="w-full h-48 object-cover" onError={(e) => { e.target.onerror = null; e.target.src=`https://placehold.co/600x400/FBF9F6/402E32?text=Imagen%20no%20disponible`; }} />
+                    <div className="p-4 flex flex-col flex-grow">
+                        <h3 className="text-xl font-serif text-stone-800">{recipe.name}</h3>
+                        <p className="text-lg font-medium text-[#A97C50] mt-1">{formatCurrency(recipe.salePrice)}</p>
+                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-stone-100">
+                            <input type="number" value={quantity} onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className="w-16 p-2 border rounded-md text-center" />
+                            <button onClick={handleAddClick} className={`btn flex-grow ${added ? 'bg-green-500 text-white' : 'btn-secondary'}`}>{added ? '¡Agregado!' : 'Agregar'}</button>
+                        </div>
+                    </div>
+                </div>
+            );
         };
 
-        // --- Componentes de UI ---
-        const LoadingSpinner = () => ( <div className="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50"> <svg className="animate-spin h-10 w-10 text-stone-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle> <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg> </div> );
+        // --- Componentes del Panel de Administración ---
         const LoginScreen = () => {
             const [error, setError] = useState('');
             const handleSubmit = (e) => {
@@ -89,92 +266,100 @@
                 const email = e.target.email.value;
                 const password = e.target.password.value;
                 setError('');
-                auth.signInWithEmailAndPassword(email, password).catch(err => setError("Email o contraseña incorrectos."));
+                auth.signInWithEmailAndPassword(email, password)
+                    .catch(err => setError("Email o contraseña incorrectos."));
             };
-            return ( <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"> <div className="max-w-md w-full space-y-8 card"> <div><h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Acceso de Administrador</h2></div> <form className="mt-8 space-y-6" onSubmit={handleSubmit}> <div className="rounded-md shadow-sm -space-y-px"> <div><input name="email" type="email" autoComplete="email" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email" /></div> <div><input name="password" type="password" autoComplete="current-password" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Contraseña" /></div> </div> {error && <p className="text-red-500 text-sm">{error}</p>} <div><button type="submit" className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white btn-primary">Ingresar</button></div> </form> </div> </div> );
-        };
 
-        const Modal = ({ isOpen, onClose, title, children }) => {
-            if (!isOpen) return null;
-            return ReactDOM.createPortal(
-                <div className="modal-container" onClick={onClose}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-xl font-bold text-stone-700 mb-4">{title}</h3>
-                        {children}
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-md w-full space-y-8 card p-8">
+                        <div><h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Acceso de Administrador</h2></div>
+                        <form id="login-form" className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                             <div className="space-y-4">
+                                <div><input id="email" name="email" type="email" autoComplete="email" required className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Email" /></div>
+                                <div><input id="password" name="password" type="password" autoComplete="current-password" required className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Contraseña" /></div>
+                            </div>
+                            {error && <p className="text-red-500 text-sm">{error}</p>}
+                            <div><button type="submit" className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-stone-700 hover:bg-stone-800">Ingresar</button></div>
+                        </form>
                     </div>
-                </div>,
-                document.body
+                </div>
             );
         };
         
-        // --- Componentes de Secciones ---
-        const Materiales = () => { /* ... (código de la sección Materiales) ... */ return <div className="card">Sección Materiales</div>; };
-        const Recetas = () => { /* ... (código de la sección Recetas) ... */ return <div className="card">Sección Recetas</div>; };
-        const Historial = () => { /* ... (código de la sección Historial) ... */ return <div className="card">Sección Historial</div>; };
-        const Pedidos = () => { /* ... (código de la sección Pedidos) ... */ return <div className="card">Sección Pedidos</div>; };
+        const Dashboard = () => {
+            return (
+                <div className="container mx-auto p-4 md:p-8">
+                    <header className="card p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <nav className="flex flex-wrap items-center justify-center gap-2">
+                             <span className="nav-btn active">Cocina Digital (Próximamente)</span>
+                        </nav>
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <a href="/" target="_blank" className="nav-btn bg-blue-100 text-blue-800 hover:bg-blue-200 flex-1 text-center">Ver Tienda</a>
+                            <button onClick={() => auth.signOut()} className="btn btn-danger flex-1">Cerrar Sesión</button>
+                        </div>
+                    </header>
+                    <main className="card p-6 mt-6 text-center">
+                        <h1 className="text-2xl font-bold text-stone-700">¡Bienvenido al Panel de Administración!</h1>
+                        <p className="mt-4 text-gray-600">Este es el nuevo esqueleto de tu aplicación, construido con React.</p>
+                        <p className="mt-2 text-gray-500 text-sm">El próximo paso será construir aquí las secciones de Pedidos, Materiales, Recetas e Historial.</p>
+                    </main>
+                </div>
+            );
+        };
 
-        // --- App Principal ---
+        // --- Componente Principal de la Aplicación ---
         const App = () => {
-            const [user, setUser] = useState(null);
+            const [user, setUser] = useState(undefined); // Inicia como indefinido para distinguir del estado "null" (sin sesión)
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
                 const unsubscribe = auth.onAuthStateChanged(authUser => {
-                    setUser(authUser && !authUser.isAnonymous ? authUser : null);
-                    setLoading(false);
+                    if (authUser) {
+                        setUser(authUser);
+                    } else {
+                        // Si no hay sesión, intentamos un inicio de sesión anónimo.
+                        auth.signInAnonymously().catch(error => {
+                            console.error("Fallo el inicio de sesión anónimo:", error);
+                            setUser(null); // Marcamos que el usuario es nulo (falló)
+                        });
+                    }
                 });
                 return () => unsubscribe();
             }, []);
 
-            if (loading) return <LoadingSpinner />;
-            return user ? <Dashboard /> : <LoginScreen />;
-        };
-
-        // --- Panel Principal ---
-        const Dashboard = () => {
-            const [view, setView] = useState('pedidos');
-            const [data, setData] = useState({ materials: [], recipes: [], orders: [], completedOrders: [] });
-            const [loading, setLoading] = useState(true);
-
+            // Dejamos de mostrar el spinner solo cuando `user` ya no es `undefined`.
             useEffect(() => {
-                const unsubs = [
-                    materialsCollection.orderBy('name').onSnapshot(snap => setData(d => ({...d, materials: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
-                    recipesCollection.onSnapshot(snap => setData(d => ({...d, recipes: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
-                    ordersCollection.orderBy('createdAt', 'desc').onSnapshot(snap => setData(d => ({...d, orders: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) }))),
-                    completedOrdersCollection.orderBy('completedAt', 'desc').onSnapshot(snap => setData(d => ({...d, completedOrders: snap.docs.map(doc => ({id: doc.id, ...doc.data()})) })))
-                ];
-                setLoading(false);
-                return () => unsubs.forEach(unsub => unsub());
-            }, []);
+                if (user !== undefined) {
+                    setLoading(false);
+                }
+            }, [user]);
 
+            if (loading) {
+                return <LoadingSpinner />;
+            }
+
+            // Si el login de admin está activo
+            if (user && !user.isAnonymous) {
+                return <LoginScreen />;
+            }
+            
+            // Si hay usuario (que solo puede ser anónimo), mostramos la tienda
+            if (user) {
+                return <CustomerStore user={user} />;
+            }
+
+            // Si la carga terminó y `user` es `null`, el login anónimo falló.
             return (
-                <DataContext.Provider value={data}>
-                    <div className="container mx-auto p-4 md:p-8">
-                        <nav className="card flex flex-col sm:flex-row justify-between items-center gap-4">
-                            <div className="flex flex-wrap items-center justify-center gap-2">
-                                <button onClick={() => setView('pedidos')} className={`nav-btn ${view === 'pedidos' ? 'active' : ''}`}>Pedidos</button>
-                                <button onClick={() => setView('materiales')} className={`nav-btn ${view === 'materiales' ? 'active' : ''}`}>Materiales</button>
-                                <button onClick={() => setView('recetas')} className={`nav-btn ${view === 'recetas' ? 'active' : ''}`}>Recetas</button>
-                                <button onClick={() => setView('historial')} className={`nav-btn ${view === 'historial' ? 'active' : ''}`}>Historial</button>
-                            </div>
-                            <div className="flex items-center gap-4 w-full sm:w-auto">
-                                <a href="pedidos.html" target="_blank" className="nav-btn bg-blue-100 text-blue-800 hover:bg-blue-200 flex-1 text-center">Ver Tienda</a>
-                                <button onClick={() => auth.signOut()} className="btn btn-danger flex-1">Cerrar Sesión</button>
-                            </div>
-                        </nav>
-                        
-                        <main>
-                            {loading ? <LoadingSpinner /> : (
-                                <>
-                                    <div className={view !== 'pedidos' ? 'hidden' : ''}><Pedidos /></div>
-                                    <div className={view !== 'materiales' ? 'hidden' : ''}><Materiales /></div>
-                                    <div className={view !== 'recetas' ? 'hidden' : ''}><Recetas /></div>
-                                    <div className={view !== 'historial' ? 'hidden' : ''}><Historial /></div>
-                                </>
-                            )}
-                        </main>
+                <div className="min-h-screen flex items-center justify-center text-center p-4">
+                    <div className="card p-8">
+                        <h1 className="text-2xl font-serif text-red-700">Error de Conexión</h1>
+                        <p className="text-stone-600 mt-2">No se pudo establecer una sesión para cargar los productos.</p>
+                        <p className="text-stone-500 text-sm mt-4">
+                            <strong>Posible causa:</strong> El inicio de sesión anónimo puede estar deshabilitado en tu proyecto de Firebase.
+                        </p>
                     </div>
-                </DataContext.Provider>
+                </div>
             );
         };
 
